@@ -1,0 +1,1 @@
+{"threshold": 0.5891163219439395, "mode": "unsupervised", "metrics": {}, "score_scale": "proba", "score_calibration": {"type": "minmax", "min": -0.2399392342272531, "max": 0.16734745042340482}}
