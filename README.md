@@ -13,31 +13,31 @@ enriched data to Parquet storage for offline analysis or model retraining.
 
 1. **Data Generator** - Produces synthetic transactions (user ID, amount, location,
     timestamp).
-       ○ Sends messages continuously to Kafka topic transactions.
+       - Sends messages continuously to Kafka topic transactions.
 2. **Kafka Broker (Dockerized)** - Handles real-time ingestion of transaction streams.
     ○ Topics:
-       ■ transactions → incoming raw transactions
-       ■ fraud_alerts → alerts for suspicious transactions
+       - transactions → incoming raw transactions
+       - fraud_alerts → alerts for suspicious transactions
 3. **Spark Structured Streaming** - Reads from Kafka.
     ○ Parses and transforms raw transactions.
     ○ Builds **feature-rich data frames** (time features, velocity features, user behavior,
        etc.).
     ○ Scores transactions using trained ML models.
     ○ Writes results to:
-       ■ Console (for visibility)
-       ■ Parquet (./artifacts/enriched_transactions)
-       ■ Kafka (fraud_alerts) for real-time alerting.
+       - Console (for visibility)
+       - Parquet (./artifacts/enriched_transactions)
+       - Kafka (fraud_alerts) for real-time alerting.
 4. **Model Training** - Implemented in train_model.py.
     ○ Two modes:
-       ■ **Supervised** (Logistic Regression / XGBoost): requires labeled transactions.
-       ■ **Unsupervised** (IsolationForest): anomaly detection without labels.
+       - **Supervised** (Logistic Regression / XGBoost): requires labeled transactions.
+       - **Unsupervised** (IsolationForest): anomaly detection without labels.
     ○ Features extracted include velocity, rolling window stats, log-transforms, and
        location frequency.
     ○ Artifacts saved:
-       ■ model.pkl → trained model
-       ■ preprocess_scaler.pkl → feature scaler
-       ■ features.json → exact feature order
-       ■ threshold.json → threshold, mode, calibration metadata
+       - model.pkl → trained model
+       - preprocess_scaler.pkl → feature scaler
+       - features.json → exact feature order
+       - threshold.json → threshold, mode, calibration metadata
 
 
 5. **Real-Time Scoring (Spark)** - Loads artifacts.
