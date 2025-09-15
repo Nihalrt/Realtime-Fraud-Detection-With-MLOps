@@ -15,7 +15,7 @@ enriched data to Parquet storage for offline analysis or model retraining.
     timestamp).
        ○ Sends messages continuously to Kafka topic transactions.
 2. **Kafka Broker (Dockerized)** - Handles real-time ingestion of transaction streams.
-    ○ Topics:
+     ○ Topics:
        ■ transactions → incoming raw transactions
        ■ fraud_alerts → alerts for suspicious transactions
 3. **Spark Structured Streaming** - Reads from Kafka.

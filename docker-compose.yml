@@ -8,6 +8,16 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: fraud
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infra/pgdata:/var/lib/postgresql/data
 
   kafka:
     image: confluentinc/cp-kafka:7.6.1
