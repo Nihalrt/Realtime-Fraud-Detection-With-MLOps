@@ -4,7 +4,7 @@ from kafka import KafkaConsumer
 import psycopg2
 
 BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
-TOPIC     = os.getenv("KAFKA_ALERT_TOPIC", "fraud_alerts")
+TOPIC     = os.getenv("KAFKA_ALERTS_TOPIC", "fraud_alerts")
 GROUP_ID  = os.getenv("KAFKA_GROUP_ID", "fraud_sink")
 
 PG_HOST = os.getenv("PG_HOST", "localhost")
@@ -56,19 +56,18 @@ def main():
                 for _, msgs in records.items():
                     for m in msgs:
                         p = m.value
-                        txid = p.get("txid")
-                        userid = p.get("userid")
-                        uid = p.get("uid")
-                        score = p.get("score")
+                        txid = p.get("transaction_id")
+                        uid = p.get("user_id")
+                        score = float(p.get("fraud_score", 0.0))
                         ts_event = None
                         ts_str = p.get("timestamp")
                         try:
-                            ts_str = dtparser.parse(ts_str)
+                            ts_event = dtparser.parse(ts_str)
                         except:
                             pass
 
                         try:
-                            cur.execute(SQL_ALERT, (ts_str, userid, score, ts_event))
+                            cur.execute(SQL_ALERT, (txid, uid, score, ts_event))
                         except Exception as e:
                             print("query failed", e)
         except Exception as e:
