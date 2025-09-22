@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Environments
+.venv/
+env/
+venv/
+*.egg-info/
+.eggs/
+
+# Spark checkpoints
+spark-streaming/_chkpt_scoring/
+*_chkpt_*/
+
+# Data & models
+*.pkl
+*.h5
+*.model
+*.zip
+models/
+artifacts/
+
+# Mac
+.DS_Store
