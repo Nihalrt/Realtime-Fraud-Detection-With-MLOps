@@ -31,7 +31,7 @@ def get_consumer():
         bootstrap_servers=servers,
         group_id=GROUP_ID,
         auto_offset_reset="latest",
-        enable_auto_commit=True,
+        enable_auto_commit=False,
         value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         consumer_timeout_ms=1000,
         max_poll_records=500,
@@ -41,37 +41,46 @@ def get_conn():
     return psycopg2.connect(
         host=PG_HOST, port=PG_PORT, dbname=PG_DB, user=PG_USER, password=PG_PASS)
 
+def persist_records(conn, records):
+    """Persist the entire polled batch before its Kafka offsets are committed.
+
+    A failed insert rolls back the batch and propagates the error. Restarting
+    the consumer then replays it; the transaction-id upsert handles duplicates.
+    """
+    try:
+        with conn.cursor() as cur:
+            for msgs in records.values():
+                for message in msgs:
+                    payload = message.value
+                    ts_str = payload.get("timestamp")
+                    ts_event = dtparser.parse(ts_str) if ts_str else None
+                    cur.execute(SQL_ALERT, (
+                        payload["transaction_id"], payload["user_id"],
+                        float(payload["fraud_score"]), ts_event,
+                    ))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+
+
 def main():
     consumer = get_consumer()
-    conn = get_conn()
-    conn.autocommit = True
-
-    while True:
-        try:
+    conn = None
+    try:
+        conn = get_conn()
+        conn.autocommit = False
+        while True:
             records = consumer.poll(timeout_ms=1000)
             if not records:
                 continue
+            persist_records(conn, records)
+            consumer.commit()
+    finally:
+        if conn is not None:
+            conn.close()
+        consumer.close()
 
-            with conn.cursor() as cur:
-                for _, msgs in records.items():
-                    for m in msgs:
-                        p = m.value
-                        txid = p.get("transaction_id")
-                        uid = p.get("user_id")
-                        score = float(p.get("fraud_score", 0.0))
-                        ts_event = None
-                        ts_str = p.get("timestamp")
-                        try:
-                            ts_event = dtparser.parse(ts_str)
-                        except:
-                            pass
-
-                        try:
-                            cur.execute(SQL_ALERT, (txid, uid, score, ts_event))
-                        except Exception as e:
-                            print("query failed", e)
-        except Exception as e:
-            print("loop error", e)
 
 if __name__ == "__main__":
     while True:

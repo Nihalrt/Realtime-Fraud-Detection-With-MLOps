@@ -56,3 +56,5 @@ scikit-learn~=1.7.1
 xgboost~=3.0.4
 streamlit~=1.48.0
 pyspark-stubs~=3.0.0.post3
+# pandas.read_parquet requires a Parquet engine.
+pyarrow>=18,<27

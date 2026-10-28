@@ -21,8 +21,16 @@ spark-streaming/_chkpt_scoring/
 *.h5
 *.model
 *.zip
-models/
+# Keep model source; ignore generated artifacts only
+models/*.json
 artifacts/
 
 # Mac
 .DS_Store
+
+# Local configuration and tools
+.env
+.env.*
+!.env.example
+sai/
+infra/pgdata/

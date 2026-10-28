@@ -68,23 +68,23 @@ def add_user_velocity_features(df: pd.DataFrame) -> pd.DataFrame:
         g = g.set_index("timestamp").copy()
 
         # use prior-only values to avoid leakage
-        amt_prev = g["amount"].shift(1)
+        amounts = g["amount"]
 
         # 1h window
-        g["user_cnt_1h"]  = amt_prev.rolling("1h").count()
-        g["user_sum_1h"]  = amt_prev.rolling("1h").sum()
-        g["user_mean_1h"] = amt_prev.rolling("1h").mean()
+        g["user_cnt_1h"]  = amounts.rolling("1h", closed="left").count()
+        g["user_sum_1h"]  = amounts.rolling("1h", closed="left").sum()
+        g["user_mean_1h"] = amounts.rolling("1h", closed="left").mean()
 
         # 24h window
-        g["user_cnt_24h"]  = amt_prev.rolling("24h").count()
-        g["user_sum_24h"]  = amt_prev.rolling("24h").sum()
-        g["user_mean_24h"] = amt_prev.rolling("24h").mean()
+        g["user_cnt_24h"]  = amounts.rolling("24h", closed="left").count()
+        g["user_sum_24h"]  = amounts.rolling("24h", closed="left").sum()
+        g["user_mean_24h"] = amounts.rolling("24h", closed="left").mean()
 
         # 7d window
-        g["user_cnt_7d"]  = amt_prev.rolling("7d").count()
-        g["user_sum_7d"]  = amt_prev.rolling("7d").sum()
-        g["user_mean_7d"] = amt_prev.rolling("7d").mean()
-        g["user_std_7d"]  = amt_prev.rolling("7d").std()
+        g["user_cnt_7d"]  = amounts.rolling("7d", closed="left").count()
+        g["user_sum_7d"]  = amounts.rolling("7d", closed="left").sum()
+        g["user_mean_7d"] = amounts.rolling("7d", closed="left").mean()
+        g["user_std_7d"]  = amounts.rolling("7d", closed="left").std()
 
         # z-score vs trailing 7d (avoid div-by-zero)
         mu7 = g["user_mean_7d"]
@@ -128,9 +128,13 @@ def add_amount_transforms(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def build_feature_frame(df: pd.DataFrame):
-    df = df[["transaction_id", "user_id", "amount", "location", "timestamp"]].copy()
-    # normalize names for safety
+    # Preserve optional labels through filtering and per-user sorting.
+    df = df.copy()
     df.columns = df.columns.str.lower()
+    columns = ["transaction_id", "user_id", "amount", "location", "timestamp"]
+    if "label" in df.columns:
+        columns.append("label")
+    df = df[columns]
 
     df = parse_times(df)
     df = add_time_features(df)
@@ -172,6 +176,15 @@ def time_split(df: pd.DataFrame, time_col="timestamp", holdout_frac=0.2):
     n = len(df)
     split = int(n * (1-holdout_frac))
     return df.iloc[:split], df.iloc[split:]
+
+
+def best_f1_threshold(y_true, scores):
+    """PR point i uses threshold i; the final PR point has no threshold."""
+    precision, recall, thresholds = precision_recall_curve(y_true, scores)
+    f1 = 2 * precision[:-1] * recall[:-1] / (precision[:-1] + recall[:-1] + 1e-9)
+    if not len(thresholds):
+        raise ValueError("Cannot choose a threshold without validation scores")
+    return float(thresholds[int(np.nanargmax(f1))])
 
 
 def train_supervised_model(df_features: pd.DataFrame, features: List[str], y: pd.Series):
@@ -229,10 +242,7 @@ def train_supervised_model(df_features: pd.DataFrame, features: List[str], y: pd
 
     roc = roc_auc_score(y_val, val_scores)
     pr  = average_precision_score(y_val, val_scores)
-    prec, rec, thr = precision_recall_curve(y_val, val_scores)
-    f1 = (2 * prec * rec) / (prec + rec + 1e-9)
-    best_idx = int(np.nanargmax(f1))
-    best_thr = float(thr[max(best_idx-1, 0)]) if best_idx < len(thr) else 0.5
+    best_thr = best_f1_threshold(y_val, val_scores)
 
     artifacts = {
         "scaler": scaler,
@@ -246,7 +256,7 @@ def train_supervised_model(df_features: pd.DataFrame, features: List[str], y: pd
     return artifacts
 
 def train_unsupervised_model(df_features: pd.DataFrame, features: List[str]):
-    X = df_features[features].astype(int)
+    X = df_features[features].astype(float)
     scaler = RobustScaler()
     Xs = scaler.fit_transform(X)
     iso = IsolationForest(
