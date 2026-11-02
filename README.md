@@ -1,5 +1,10 @@
 # Real-Time Fraud Detection with MLOps
 
+[![Regression tests](https://github.com/Nihalrt/Realtime-Fraud-Detection-With-MLOps/actions/workflows/tests.yml/badge.svg)](https://github.com/Nihalrt/Realtime-Fraud-Detection-With-MLOps/actions/workflows/tests.yml)
+
+**Transaction scoring, replay-aware alert storage, and a live-alert dashboard.**  
+[Engineering walkthrough](docs/ENGINEERING.md) · [Kafka setup](#local-kafka-workflow) · [Run tests](#tests) · [Limits](#security-and-limitations)
+
 A portfolio prototype for transaction feature engineering, supervised and
 unsupervised fraud scoring, Kafka alerts, and a Streamlit dashboard. It includes
 an experimental Google Cloud Pub/Sub transaction generator. The checked-in
